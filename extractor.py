@@ -20,7 +20,7 @@ from cookielib import CookieJar
 
 url = 'http://meteoroleg.upc.es/dexserver/j_spring_security_check'
 urlRep = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
-login = { 'j_username': 'lsi-upc', 'j_password': 'lsi-upc' }
+login = { 'j_username': , 'j_password':  }
 headers = {'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; en-US)'}
 loginFormData = urllib.urlencode(login)
 
