@@ -16,24 +16,25 @@ along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 """
 import urllib2, sys, urllib, re
 from cookielib import CookieJar
-from dateutil.parser import parse
+#from dateutil.parser import parse
 from xml import etree
 import pickle
+from datetime import datetime as dt
 
 class trace:
      times = dict()
 #Parsing preparation
 #Date hour:min nodeId nodeName traceId readingType* value
-     pattern = re.compile( '(.*?)/(.*?)/(.*?) (.*?),(.*?),(.*?),(.*?),(.*?),"(.*?),(.*?)"' )
-     search = trace.pattern.search
+     pattern = re.compile( '(.*?)/(.*?)/(.*?) (.*?):(.*?),(.*?),(.*?),(.*?),(.*?),"(.*?),(.*?)"' )
+     search = pattern.search
 
      @staticmethod
-     def getTime(string):
+     def getTime(tup):
           try:
-               return trace.times[string]
+               return trace.times[tup]
           except KeyError:
-               t = parse(string)
-               trace.times[string] = t
+               t = dt(*tup)
+               trace.times[tup] = t
                return t
 
      def __init__(self, rhs):
@@ -47,20 +48,20 @@ class trace:
                self.lum = rhs.lum
           except AttributeError: 
                s = trace.search(rhs)
-               self.traceId = s.group(7)
-               self.time = trace.getTime(s.group(3)+'-'+s.group(2)+'-'+s.group(1)+'T'+s.group(4)+'+01:00')
-               self.nodeId = s.group(5)
-               self.name = s.group(6)
-               kind = s.group(8)
+               self.traceId = s.group(8)
+               self.time = trace.getTime((int(s.group(3)), int(s.group(2)),int(s.group(1)),int(s.group(4)),int(s.group(5))))
+               self.nodeId = s.group(6)
+               self.name = s.group(7)
+               kind = s.group(9)
                self.temp = None
                self.hum = None
                self.lum = None
                if kind == 'temperatura':
-                    self.temp = float(s.group(9)+'.'+s.group(10)) 
+                    self.temp = float(s.group(10)+'.'+s.group(11)) 
                elif kind == 'humitat':
-                    self.hum = float(s.group(9)+'.'+s.group(10)) 
+                    self.hum = float(s.group(10)+'.'+s.group(11)) 
                elif kind == 'lluminositat':
-                    self.lum = float((s.group(9).replace('.',''))+'.'+s.group(10)) 
+                    self.lum = float((s.group(10).replace('.',''))+'.'+s.group(11)) 
 
      def __add__(lhs, rhs):
           if rhs.temp is not None:
