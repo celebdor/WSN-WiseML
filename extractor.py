@@ -23,14 +23,22 @@ import datetime
 from operator import attrgetter
 
 class trace:
+     """ A sensor network trace. Collects trace data and allows its
+     conversion to xml. """
+     #: Memoization dictionary for the getTime method.
      times = dict()
-#Parsing preparation
-#Date hour:min nodeId nodeName traceId readingType* value
+     #: A compiled regular expression that matches Date hour:min nodeId nodeName traceId readingType* value
      pattern = re.compile( '(.*?)/(.*?)/(.*?) (.*?):(.*?),(.*?),(.*?),(.*?),(.*?),"(.*?),(.*?)"' )
+     #: Returns a regular expression search object that matches pattern.
      search = pattern.search
 
      @classmethod
      def getTime(cls, tup):
+          """Returns and memoizes a datetime object from an ordered tuple.
+
+          Keyword arguments:
+          tup -- A tuple containing [year, [month, [day, [hour, [minute]]]]].
+          """
           try:
                return cls.times[tup]
           except KeyError:
@@ -39,6 +47,11 @@ class trace:
                return t
 
      def __init__(self, rhs):
+          """Form a trace object.
+
+          Keyword arguments:
+          rhs -- a trace object or a compatible string.
+          """
           try:
                self.traceId = rhs.traceId
                self.time = rhs.time
@@ -65,6 +78,12 @@ class trace:
                     self.lum = float((s.group(10).replace('.',''))+'.'+s.group(11)) 
 
      def __add__(lhs, rhs):
+          """Consolidates the data of lhs and rhs.
+
+          Keyword arguments:
+          lhs -- Left hand side operator, a trace.
+          rhs -- Right hand side operator, a trace.
+          """
           if rhs.temp is not None:
                lhs.temp = rhs.temp
           if rhs.hum is not None:
@@ -74,15 +93,23 @@ class trace:
           return lhs
 
      def hash(self):
+          """Returns a tuple of the key elements of a trace.  """
           return (self.time, self.nodeId)
 
      def __eq__(lhs, rhs):
+          """ Checks if lhs and rhs are logically equal.
+
+          lhs -- Left hand side operator, a trace.
+          rhs -- Right hand side operator, a trace.
+          """
           return lhs.nodeId == rhs.nodeId and lhs.time == rhs.time
 
      def __str__(self):
+          """ Returns a string representation of the current trace. """
           return '('+str(self.time)+':'+self.nodeId+'_'+self.name+')->'+str(self.temp)+'C '+str(self.hum)+'% '+str(self.lum)+'LUX'
 
      def toXml(self):
+          """ Returns an etree.Element object representation of the current trace. """
           e = etree.Element('node')
           e.attrib['id'] = 'urn:wisebed:upc:'+self.nodeId
           temp = etree.SubElement(e, 'data')
@@ -97,16 +124,28 @@ class trace:
           return e
 
 class experiment:
+     """ A sensor network experiment. Collects data and allows its
+     conversion to xml. """
+     #: Dictionary with node ids and node names.
      nodes = dict()
 
      @classmethod
      def trackNodes(cls, rhs):
+          """ Fills the node dictionary with the relevant information of rhs.
+
+          rhs -- A trace.
+          """
           cls.nodes[rhs.nodeId] = rhs.name
 
      def __init__(self):
+          """ Initializes an empty experiment."""
           self.traces = dict()
 
      def __init__(self, rhs):
+          """ Initializes an experiment containing rhs.
+          
+          rhs --- An experiment or a trace.
+          """
           try:
                self.traces = rhs.traces
           except AttributeError:
@@ -115,6 +154,12 @@ class experiment:
                self+=rhs
 
      def __add__(lhs, rhs):
+          """Adds rhs to the lhs experiment.
+
+          Keyword arguments:
+          lhs -- An experiment.
+          rhs -- A trace.
+          """
           h = rhs.hash()
           try:
                lhs.traces[h] += rhs
@@ -124,15 +169,28 @@ class experiment:
           return lhs
 
      def __contains__(lhs, rhs):
+          """Checks if rhs is present in lhs.
+
+          Keyword arguments:
+          lhs -- An experiment.
+          rhs -- A trace.
+          """
           for e in lhs.traces:
                if e == rhs:
                     return True
           return False
      
      def __str__(self):
+          """ Returns a string representation of the current experiment. """
           return '\n'.join([str(t) for t in self.traces.values()])+'\n\n'
 
      def generateXmlSetup(self, it, et):
+          """ Returns an etree.Element object representation of the current experiment's setup.
+          
+          Keyword arguments:
+          it --- A Datetime object with the initial time of the experiment.
+          et --- A Datetime object with the ending time of the experiment.
+          """
           s = etree.Element('setup')
           time = etree.SubElement(s, 'timeinfo')
           startTime = etree.SubElement(time, 'start')
@@ -144,7 +202,7 @@ class experiment:
           for n in experiment.nodes:
                node = etree.SubElement(s, 'node')
                node.attrib['id'] = 'urn:wisebed:upc:'+n
-#position
+               #position
                pos = etree.SubElement(node, 'position')
                x = etree.SubElement(pos, 'x')
                x.text = '1.0'
@@ -152,19 +210,19 @@ class experiment:
                y.text = '1.0'
                z = etree.SubElement(pos, 'z')
                z.text = '1.0'
-#Gateway
+               #Gateway
                gateway = etree.SubElement(node, 'gateway')
                gateway.text = 'false'
-#programDetails
+               #programDetails
                gateway = etree.SubElement(node, 'programDetails')
                gateway.text = 'Environmental conditions tracking software'
-#nodeType
+               #nodeType
                gateway = etree.SubElement(node, 'nodeType')
                gateway.text = 'dexcell'
-#description
+               #description
                gateway = etree.SubElement(node, 'description')
                gateway.text = experiment.nodes[n]
-#Capabilities
+               #Capabilities
                cTemp = etree.SubElement(node, 'capability')
                cTempName = etree.SubElement(cTemp, 'name')
                cTempName.text = 'urn:wisebed:upc:node:capability:temperature' 
@@ -197,6 +255,7 @@ class experiment:
           return s
 
      def toXml(self):
+          """ Returns an etree.Element object representation of the current experiment."""
           traceList =  self.traces.values()
           traceList.sort(key=attrgetter('time'), reverse=False)
           it = traceList[0].time
@@ -218,10 +277,18 @@ class experiment:
           
      
 class dataFetcher:
-     def __init__(self):
+     """ Fetches the data either from the Internet or an extractor
+     serialized file and makes it available for serialization and use."""
+     def __init__(self): 
+          """ Initializes an empty dataFetcher."""
           self.l = list()
 
      def fetchSerialized(self, filename = 'list_obj.o'):
+          """ Fetch the sensor readings from a serialized file.
+
+          Keyword arguments:
+          filename --- The name of the file containing the serialized object readings.
+          """
           try:
                fl = open(filename, 'rb')
           except IOError:
@@ -235,6 +302,11 @@ class dataFetcher:
           fl.close()
 
      def fetchNetData(self, username, password):
+          """ Fetch the sensor readings from the internet.
+          
+          Keyword arguments:
+          username --- The webpage username.
+          username --- The webpage password."""
           url = 'http://meteoroleg.upc.es/dexserver/j_spring_security_check'
           urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
           urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=84'
@@ -265,6 +337,11 @@ class dataFetcher:
           self.l.extend(respLum)
 
      def serialize(self, filename = 'list_obj.o'):
+          """ Save the sensor readings to a serialized file.
+
+          Keyword arguments:
+          filename --- The name of the file in which to serialize the sensor readings.
+          """
           try:
                fl = open(filename, 'wb')
           except IOError:
@@ -274,9 +351,17 @@ class dataFetcher:
           fl.close()
           
      def data(self):
+          """ Returns the sensor readings data as a list. """
           return self.l
 
 def traceProcess(lhs, rhs):
+     """ Creates an experiment and a trace and adds the latter to the former.
+
+     Keyword arguments:
+     lhs --- A sensor readings string, a trace or an experiment.
+     rhs --- A sensor readings string or a trace.
+     """
+
      return experiment(lhs)+trace(rhs)
 
 def main():
