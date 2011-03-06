@@ -28,13 +28,13 @@ class trace:
      pattern = re.compile( '(.*?)/(.*?)/(.*?) (.*?):(.*?),(.*?),(.*?),(.*?),(.*?),"(.*?),(.*?)"' )
      search = pattern.search
 
-     @staticmethod
-     def getTime(tup):
+     @classmethod
+     def getTime(cls, tup):
           try:
-               return trace.times[tup]
+               return cls.times[tup]
           except KeyError:
                t = datetime.datetime(*tup)
-               trace.times[tup] = t
+               cls.times[tup] = t
                return t
 
      def __init__(self, rhs):
@@ -91,11 +91,17 @@ class trace:
           hum.attrib['key'] = 'urn:wisebed:upc:node:capability:humidity'
           hum.text = str(self.hum)
           lum = etree.SubElement(e, 'data')
-          lum.attrib['key'] = 'urn:wisebed:upc:node:capability:luminosity'
+          lum.attrib['key'] = 'urn:wisebed:upc:node:capability:light'
           lum.text = str(self.lum)
           return e
 
 class experiment:
+     nodes = dict()
+
+     @classmethod
+     def trackNodes(cls, rhs):
+          cls.nodes[rhs.nodeId] = rhs.name
+
      def __init__(self):
           self.traces = dict()
 
@@ -110,10 +116,10 @@ class experiment:
      def __add__(lhs, rhs):
           h = rhs.hash()
           try:
-               #print lhs.traces[h], rhs
                lhs.traces[h] += rhs
           except KeyError:
                lhs.traces[h] = rhs
+               experiment.trackNodes(rhs)
           return lhs
 
      def __contains__(lhs, rhs):
@@ -125,14 +131,80 @@ class experiment:
      def __str__(self):
           return '\n'.join([str(t) for t in self.traces.values()])+'\n\n'
 
+     def generateXmlSetup(self, it, et):
+          s = etree.Element('setup')
+          time = etree.SubElement(s, 'timeinfo')
+          startTime = etree.SubElement(time, 'start')
+          startTime.text = it.isoformat()
+          endTime = etree.SubElement(time, 'end')
+          endTime.text = et.isoformat()
+          timeUnit = etree.SubElement(time, 'unit')
+          timeUnit.text = 'seconds'
+          for n in experiment.nodes:
+               node = etree.SubElement(s, 'node')
+               node.attrib['id'] = 'urn:wisebed:upc:'+n
+#position
+               pos = etree.SubElement(node, 'position')
+               x = etree.SubElement(pos, 'x')
+               x.text = '1.0'
+               y = etree.SubElement(pos, 'y')
+               y.text = '1.0'
+               z = etree.SubElement(pos, 'z')
+               z.text = '1.0'
+#Gateway
+               gateway = etree.SubElement(node, 'gateway')
+               gateway.text = 'false'
+#programDetails
+               gateway = etree.SubElement(node, 'programDetails')
+               gateway.text = 'Environmental conditions tracking software'
+#nodeType
+               gateway = etree.SubElement(node, 'nodeType')
+               gateway.text = 'dexcell'
+#description
+               gateway = etree.SubElement(node, 'description')
+               gateway.text = experiment.nodes[n]
+#Capabilities
+               cTemp = etree.SubElement(node, 'capability')
+               cTempName = etree.SubElement(cTemp, 'name')
+               cTempName.text = 'urn:wisebed:upc:node:capability:temperature' 
+               cTempDataType = etree.SubElement(cTemp, 'datatype')
+               cTempName.text = 'decimal'
+               cTempDataType = etree.SubElement(cTemp, 'unit')
+               cTempName.text = 'degrees'
+               cTempDefault = etree.SubElement(cTemp, 'default')
+               cTempDefault.text = '0'
+
+               cHum =  etree.SubElement(node, 'capability')
+               cHumName = etree.SubElement(cHum, 'name')
+               cHumName.text = 'urn:wisebed:upc:node:capability:humidity' 
+               cHumDataType = etree.SubElement(cHum, 'datatype')
+               cHumName.text = 'decimal'
+               cHumDataType = etree.SubElement(cHum, 'unit')
+               cHumName.text = 'percentage'
+               cHumDefault = etree.SubElement(cHum, 'default')
+               cHumDefault.text = '0'
+
+               cLum =  etree.SubElement(node, 'capability')
+               cLumName = etree.SubElement(cLum, 'name')
+               cLumName.text = 'urn:wisebed:upc:node:capability:light' 
+               cLumDataType = etree.SubElement(cLum, 'datatype')
+               cLumName.text = 'decimal'
+               cLumDataType = etree.SubElement(cLum, 'unit')
+               cLumName.text = 'lux'
+               cLumDefault = etree.SubElement(cLum, 'default')
+               cLumDefault.text = '0'
+          return s
+
      def toXml(self):
           traceList =  self.traces.values()
           traceList.sort(key=attrgetter('time'), reverse=False)
           it = traceList[0].time
+          lt = traceList[len(traceList)-1].time
           pd = datetime.timedelta(-1)
           root = etree.Element('wiseml')
           root.attrib['version'] = '1.0'
           root.attrib['xmlns'] = 'http://wisebed.eu/ns/wiseml/1.0'
+          root.append(self.generateXmlSetup(it, lt))
           for e in  traceList:
                t = e.time-it
                if pd != t:
