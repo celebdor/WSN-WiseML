@@ -168,9 +168,9 @@ class experiment:
                cTempName = etree.SubElement(cTemp, 'name')
                cTempName.text = 'urn:wisebed:upc:node:capability:temperature' 
                cTempDataType = etree.SubElement(cTemp, 'datatype')
-               cTempName.text = 'decimal'
-               cTempDataType = etree.SubElement(cTemp, 'unit')
-               cTempName.text = 'degrees'
+               cTempDataType.text = 'decimal'
+               cTempUnit = etree.SubElement(cTemp, 'unit')
+               cTempUnit.text = 'degrees'
                cTempDefault = etree.SubElement(cTemp, 'default')
                cTempDefault.text = '0'
 
@@ -178,9 +178,9 @@ class experiment:
                cHumName = etree.SubElement(cHum, 'name')
                cHumName.text = 'urn:wisebed:upc:node:capability:humidity' 
                cHumDataType = etree.SubElement(cHum, 'datatype')
-               cHumName.text = 'decimal'
-               cHumDataType = etree.SubElement(cHum, 'unit')
-               cHumName.text = 'percentage'
+               cHumDataType.text = 'decimal'
+               cHumUnit = etree.SubElement(cHum, 'unit')
+               cHumUnit.text = 'percentage'
                cHumDefault = etree.SubElement(cHum, 'default')
                cHumDefault.text = '0'
 
@@ -188,9 +188,9 @@ class experiment:
                cLumName = etree.SubElement(cLum, 'name')
                cLumName.text = 'urn:wisebed:upc:node:capability:light' 
                cLumDataType = etree.SubElement(cLum, 'datatype')
-               cLumName.text = 'decimal'
-               cLumDataType = etree.SubElement(cLum, 'unit')
-               cLumName.text = 'lux'
+               cLumDataType.text = 'decimal'
+               cLumUnit = etree.SubElement(cLum, 'unit')
+               cLumUnit.text = 'lux'
                cLumDefault = etree.SubElement(cLum, 'default')
                cLumDefault.text = '0'
           return s
