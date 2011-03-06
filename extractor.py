@@ -17,6 +17,7 @@ along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
 import urllib2, sys, urllib, re
 from cookielib import CookieJar
 from lxml import etree
+from optparse import OptionParser
 import pickle
 import datetime
 from operator import attrgetter
@@ -216,45 +217,91 @@ class experiment:
           return root
           
      
+class dataFetcher:
+     def __init__(self):
+          self.l = list()
+
+     def fetchSerialized(self, filename = 'list_obj.o'):
+          try:
+               fl = open(filename, 'rb')
+          except IOError:
+               print >> sys.stderr, 'The file ', filename, ' was not found'
+               sys.exit(0)
+          try:
+               self.l = pickle.load(fl)
+          except:
+               print >> sys.stderr, 'The file ', filename, 'is not a extractor object'
+               sys.exit(0)
+          fl.close()
+
+     def fetchNetData(self, username, password):
+          url = 'http://meteoroleg.upc.es/dexserver/j_spring_security_check'
+          urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
+          urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=84'
+          urlLum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=85'
+          login = { 'j_username': username , 'j_password': password }
+          headers = {'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; en-US)'}
+          loginFormData = urllib.urlencode(login)
+
+          req = urllib2.Request(url, loginFormData, headers)
+          resp = urllib2.urlopen(req)
+
+          cookies = CookieJar()
+          cookies.extract_cookies(resp, req) 
+
+          cookie_handler = urllib2.HTTPCookieProcessor(cookies)
+          redirect_handler = urllib2.HTTPRedirectHandler()
+          opener = urllib2.build_opener(redirect_handler, cookie_handler)
+#Making the initial connection for the login
+          opener.open(req)
+          reqTemp =  urllib2.Request(urlTemp, dict(), headers)
+          reqHum =  urllib2.Request(urlHum, dict(), headers)
+          reqLum =  urllib2.Request(urlLum, dict(), headers)
+          respTemp = opener.open(reqTemp)
+          respHum = opener.open(reqHum)
+          respLum = opener.open(reqLum)
+          self.l.extend(respTemp)
+          self.l.extend(respHum)
+          self.l.extend(respLum)
+
+     def serialize(self, filename = 'list_obj.o'):
+          try:
+               fl = open(filename, 'wb')
+          except IOError:
+               print >> sys.stderr, 'Failed to write to ', filename
+               sys.exit(0)
+          pickle.dump(self.l, fl)
+          fl.close()
+          
+     def data(self):
+          return self.l
+
 def traceProcess(lhs, rhs):
      return experiment(lhs)+trace(rhs)
 
-if sys.argv[3] == 'get':
-     url = 'http://meteoroleg.upc.es/dexserver/j_spring_security_check'
-     urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
-     urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=84'
-     urlLum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=85'
-     login = { 'j_username': sys.argv[1] , 'j_password': sys.argv[2] }
-     headers = {'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; en-US)'}
-     loginFormData = urllib.urlencode(login)
+def main():
+     usage = 'usage: extractor.py [options] username password'
+     aparser = OptionParser(usage, version="visor 0.9.6")
+     aparser.add_option('-n', '--net', action='store_true', default=False, dest='net', help='Fetches the data from the net.')
+     aparser.add_option('-s', '--serialize', action='store_true', default=False, dest='serialize', help='Serializes the net fetched data.')
+     aparser.add_option('-f', '--serialize_from', default='extractor_data.o', dest='fromFile', help='Defines the name of file where the serialized data will be recovered from.')
+     aparser.add_option('-t', '--serialize_to', default='extractor_data.o', dest='toFile', help='Defines the name of file where the data will be serialized to.')
+     
+     (options, args) = aparser.parse_args()
+     if len(args) != 2:
+          aparser.error('Incorrect usage')
+          sys.exit(0)
 
-     req = urllib2.Request(url, loginFormData, headers)
-     resp = urllib2.urlopen(req)
+     df = dataFetcher()
+     if options.net:
+          df.fetchNetData(sys.argv[1], sys.argv[2])
+     else:
+          df.fetchSerialized(options.fromFile)
+     if options.serialize:
+          df.serialize(options.toFile)
+     
+     trRed = reduce(traceProcess, df.data())
+     print etree.tostring(trRed.toXml(), pretty_print = True)
 
-     cookies = CookieJar()
-     cookies.extract_cookies(resp, req) 
-
-     cookie_handler = urllib2.HTTPCookieProcessor(cookies)
-     redirect_handler = urllib2.HTTPRedirectHandler()
-     opener = urllib2.build_opener(redirect_handler, cookie_handler)
-#Making the initial connection for the login
-     opener.open(req)
-     reqTemp =  urllib2.Request(urlTemp, dict(), headers)
-     reqHum =  urllib2.Request(urlHum, dict(), headers)
-     reqLum =  urllib2.Request(urlLum, dict(), headers)
-     respTemp = opener.open(reqTemp)
-     respHum = opener.open(reqHum)
-     respLum = opener.open(reqLum)
-
-     fl = open('list_obj','wb')
-     l = list(respTemp)
-     l.extend(respHum)
-     l.extend(respLum)
-     pickle.dump(l, fl)
-else:
-     fl = open('list_obj','rb')
-     l = pickle.load(fl)
-
-
-trRed = reduce(traceProcess, l)
-print etree.tostring(trRed.toXml(), pretty_print = True)
+if __name__ == "__main__":
+     sys.exit(main())
