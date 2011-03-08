@@ -19,6 +19,7 @@ import sys
 from wisemlModules import *
 from lxml import etree
 from optparse import OptionParser
+import datetime
 
 class Raw():
      @cherrypy.expose
@@ -56,10 +57,28 @@ class WiseML():
      def setRawObject(self, o):
           self.out = etree.tostring(o.toXml(), pretty_print = True)
 
+class Intervals():
+     @cherrypy.expose
+     def index(self, start = None, end = None):
+          sl = map(lambda x: int(x), start.split('-')) 
+          el = map(lambda x: int(x), end.split('-')) 
+          st = datetime.datetime(sl[0], sl[1], sl[2])
+          et = datetime.datetime(el[0], el[1], el[2])
+          out = etree.tostring(self.obj.toXml(st, et), pretty_print = True)
+          cherrypy.response.headers['Content-Type']= 'text/xml'
+          cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
+          def content():
+               yield '<?xml version="1.0" encoding="UTF-8"?>\n'
+               yield out
+          return content()
+     def setRawObject(self, o):
+          self.obj = o
+
 class WiseMLServer:
      raw = Raw()
      human = HumanReadable()
      wiseml = WiseML()
+     intervals = Intervals()
      def __init__(self, df):
           print >> sys.stderr, 'Retrieving the data...',
           data = df.data()
@@ -70,6 +89,7 @@ class WiseMLServer:
           print >> sys.stderr,'Done.'
           WiseMLServer.human.setRawObject(trRed)
           WiseMLServer.wiseml.setRawObject(trRed)
+          WiseMLServer.intervals.setRawObject(trRed)
           print >> sys.stderr,'Starting the server.'
      @cherrypy.expose
      def index(self):
@@ -95,7 +115,7 @@ class WiseMLServer:
                       <br/> 
                       <form action="intervals"> 
                       <p> 
-                      Generate file on following intervals:<br/> 
+                      Generate WiseML file on following intervals:<br/> 
                       <label for="start">Start date (YYYY-MM-DD): </label> 
                       <input type="text" id="start" name="start"/><br/> 
                       <label for="end">End date (YYYY-MM-DD): </label> 

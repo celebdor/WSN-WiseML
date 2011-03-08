@@ -253,10 +253,23 @@ class experiment:
                cLumDefault.text = '0'
           return s
 
-     def toXml(self):
+     def toXml(self, start = None, end = None):
           """ Returns an etree.Element object representation of the current experiment."""
           traceList =  self.traces.values()
           traceList.sort(key=attrgetter('time'), reverse=False)
+          if start is not None and end is not None:
+               i = 0
+               j = 0
+               for e in traceList:
+                    if e.time < start:
+                         i += 1
+                         j += 1
+                    elif e.time < end:
+                         j += 1
+                    else:
+                         break
+               traceList = traceList[i:j]
+
           it = traceList[0].time
           lt = traceList[len(traceList)-1].time
           pd = datetime.timedelta(-1)
@@ -265,7 +278,7 @@ class experiment:
           root.attrib['version'] = '1.0'
           root.attrib['xmlns'] = 'http://wisebed.eu/ns/wiseml/1.0'
           root.append(self.generateXmlSetup(it, lt))
-          for e in  traceList:
+          for e in traceList:
                t = e.time-it
                if pd != t:
                     ts = etree.Element('timestamp')
