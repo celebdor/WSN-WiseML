@@ -59,22 +59,22 @@ class trace:
                self.temp = rhs.temp
                self.hum = rhs.hum
                self.lum = rhs.lum
-          except AttributeError: 
+          except AttributeError:
                s = trace.search(rhs)
                self.traceId = s.group(8)
                self.time = trace.getTime((int(s.group(3)), int(s.group(2)),int(s.group(1)),int(s.group(4)),int(s.group(5))))
-               self.nodeId = s.group(6)
-               self.name = s.group(7)
+               self.nodeId = s.group(6).decode('utf8')
+               self.name = s.group(7).decode('utf8')
                kind = s.group(9)
                self.temp = None
                self.hum = None
                self.lum = None
                if kind == 'temperatura':
-                    self.temp = float(s.group(10)+'.'+s.group(11)) 
+                    self.temp = float(s.group(10)+'.'+s.group(11))
                elif kind == 'humitat':
-                    self.hum = float(s.group(10)+'.'+s.group(11)) 
+                    self.hum = float(s.group(10)+'.'+s.group(11))
                elif kind == 'lluminositat':
-                    self.lum = float((s.group(10).replace('.',''))+'.'+s.group(11)) 
+                    self.lum = float((s.group(10).replace('.',''))+'.'+s.group(11))
 
      def __add__(lhs, rhs):
           """Consolidates the data of lhs and rhs.
@@ -105,7 +105,11 @@ class trace:
 
      def __str__(self):
           """ Returns a string representation of the current trace. """
-          return '('+str(self.time)+':'+self.nodeId+'_'+self.name+')->'+str(self.temp)+'C '+str(self.hum)+'% '+str(self.lum)+'LUX'
+          return str(unicode(self))
+
+     def __unicode__(self):
+          """ Returns an unicode representation of the current trace. """
+          return u'('+unicode(self.time)+u':'+self.nodeId+u'_'+self.name+u')->'+unicode(self.temp)+u'C '+unicode(self.hum)+u'% '+unicode(self.lum)+u'LUX'
 
      def toXml(self):
           """ Returns an etree.Element object representation of the current trace. """
@@ -113,13 +117,13 @@ class trace:
           e.attrib['id'] = 'urn:wisebed:upc:'+self.nodeId
           temp = etree.SubElement(e, 'data')
           temp.attrib['key'] = 'urn:wisebed:upc:node:capability:temperature'
-          temp.text = str(self.temp)
+          temp.text = unicode(self.temp)
           hum = etree.SubElement(e, 'data')
           hum.attrib['key'] = 'urn:wisebed:upc:node:capability:humidity'
-          hum.text = str(self.hum)
+          hum.text = unicode(self.hum)
           lum = etree.SubElement(e, 'data')
           lum.attrib['key'] = 'urn:wisebed:upc:node:capability:light'
-          lum.text = str(self.lum)
+          lum.text = unicode(self.lum)
           return e
 
 class experiment:
@@ -142,7 +146,7 @@ class experiment:
 
      def __init__(self, rhs):
           """ Initializes an experiment containing rhs.
-          
+
           rhs --- An experiment or a trace.
           """
           try:
@@ -178,14 +182,18 @@ class experiment:
                if e == rhs:
                     return True
           return False
-     
+
      def __str__(self):
           """ Returns a string representation of the current experiment. """
-          return '\n'.join([str(t) for t in self.traces.values()])+'\n\n'
+          return str(unicode(self))
+
+     def __unicode__(self):
+          """ Returns an unicode representation of the current experiment. """
+          return u'\n'.join([unicode(t) for t in self.traces.values()])+u'\n\n'
 
      def generateXmlSetup(self, it, et):
           """ Returns an etree.Element object representation of the current experiment's setup.
-          
+
           Keyword arguments:
           it --- A Datetime object with the initial time of the experiment.
           et --- A Datetime object with the ending time of the experiment.
@@ -213,18 +221,18 @@ class experiment:
                gateway = etree.SubElement(node, 'gateway')
                gateway.text = 'false'
                #programDetails
-               gateway = etree.SubElement(node, 'programDetails')
-               gateway.text = 'Environmental conditions tracking software'
+               progDetail = etree.SubElement(node, 'programDetails')
+               progDetail.text = 'Environmental conditions tracking software'
                #nodeType
-               gateway = etree.SubElement(node, 'nodeType')
-               gateway.text = 'dexcell'
+               nodeType = etree.SubElement(node, 'nodeType')
+               nodeType.text = 'dexcell'
                #description
-               gateway = etree.SubElement(node, 'description')
-               gateway.text = experiment.nodes[n]
+               description = etree.SubElement(node, 'description')
+               description.text = experiment.nodes[n]
                #Capabilities
                cTemp = etree.SubElement(node, 'capability')
                cTempName = etree.SubElement(cTemp, 'name')
-               cTempName.text = 'urn:wisebed:upc:node:capability:temperature' 
+               cTempName.text = 'urn:wisebed:upc:node:capability:temperature'
                cTempDataType = etree.SubElement(cTemp, 'datatype')
                cTempDataType.text = 'decimal'
                cTempUnit = etree.SubElement(cTemp, 'unit')
@@ -234,7 +242,7 @@ class experiment:
 
                cHum =  etree.SubElement(node, 'capability')
                cHumName = etree.SubElement(cHum, 'name')
-               cHumName.text = 'urn:wisebed:upc:node:capability:humidity' 
+               cHumName.text = 'urn:wisebed:upc:node:capability:humidity'
                cHumDataType = etree.SubElement(cHum, 'datatype')
                cHumDataType.text = 'decimal'
                cHumUnit = etree.SubElement(cHum, 'unit')
@@ -244,7 +252,7 @@ class experiment:
 
                cLum =  etree.SubElement(node, 'capability')
                cLumName = etree.SubElement(cLum, 'name')
-               cLumName.text = 'urn:wisebed:upc:node:capability:light' 
+               cLumName.text = 'urn:wisebed:upc:node:capability:light'
                cLumDataType = etree.SubElement(cLum, 'datatype')
                cLumDataType.text = 'decimal'
                cLumUnit = etree.SubElement(cLum, 'unit')
@@ -273,7 +281,7 @@ class experiment:
           it = traceList[0].time
           lt = traceList[len(traceList)-1].time
           pd = datetime.timedelta(-1)
-          
+
           root = etree.Element('wiseml')
           root.attrib['version'] = '1.0'
           root.attrib['xmlns'] = 'http://wisebed.eu/ns/wiseml/1.0'
@@ -282,19 +290,21 @@ class experiment:
                t = e.time-it
                if pd != t:
                     ts = etree.Element('timestamp')
-                    ts.text = str(t.seconds)
+                    ts.text = unicode(t.seconds)
                     root.append(ts)
                     pd = t
                root.append(e.toXml())
           return root
-          
-     
+
+
 class dataFetcher:
      """ Fetches the data either from the Internet or an extractor
      serialized file and makes it available for serialization and use."""
-     def __init__(self): 
+     def __init__(self, username = None, password = None):
           """ Initializes an empty dataFetcher."""
           self.l = list()
+          self.username = username
+          self.password = username
 
      def fetchSerialized(self, filename = 'list_obj.o'):
           """ Fetch the sensor readings from a serialized file.
@@ -314,17 +324,24 @@ class dataFetcher:
                sys.exit(0)
           fl.close()
 
-     def fetchNetData(self, username, password):
+     def fetchNetData(self, weekOrYear = True):
           """ Fetch the sensor readings from the internet.
-          
+
           Keyword arguments:
           username --- The webpage username.
-          username --- The webpage password."""
+          username --- The webpage password.
+          weekOrYear --- True if gathering Yearly data, False for weekly data."""
+
           url = 'http://meteoroleg.upc.es/dexserver/j_spring_security_check'
-          urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
-          urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=84'
-          urlLum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=85'
-          login = { 'j_username': username , 'j_password': password }
+          if weekOrYear: #Yearly
+              urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=83'
+              urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=84'
+              urlLum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=85'
+          else: #weekly
+              urlTemp = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=87'
+              urlHum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=89'
+              urlLum = 'http://meteoroleg.upc.es/dexserver/report-results.htm?6578706f7274=1&d-49653-e=1&queryId=91'
+          login = { 'j_username': self.username , 'j_password': self.password }
           headers = {'User-Agent': 'Mozilla/5.0 (X11; U; Linux i686; en-US)'}
           loginFormData = urllib.urlencode(login)
 
@@ -332,16 +349,16 @@ class dataFetcher:
           resp = urllib2.urlopen(req)
 
           cookies = CookieJar()
-          cookies.extract_cookies(resp, req) 
+          cookies.extract_cookies(resp, req)
 
           cookie_handler = urllib2.HTTPCookieProcessor(cookies)
           redirect_handler = urllib2.HTTPRedirectHandler()
           opener = urllib2.build_opener(redirect_handler, cookie_handler)
-#Making the initial connection for the login
+          #Making the initial connection for the login
           opener.open(req)
-          reqTemp =  urllib2.Request(urlTemp, dict(), headers)
-          reqHum =  urllib2.Request(urlHum, dict(), headers)
-          reqLum =  urllib2.Request(urlLum, dict(), headers)
+          reqTemp =  urllib2.Request(urlTemp, headers = headers)
+          reqHum =  urllib2.Request(urlHum, headers = headers)
+          reqLum =  urllib2.Request(urlLum, headers = headers)
           respTemp = opener.open(reqTemp)
           respHum = opener.open(reqHum)
           respLum = opener.open(reqLum)
@@ -362,7 +379,7 @@ class dataFetcher:
                sys.exit(0)
           pickle.dump(self.l, fl)
           fl.close()
-          
+
      def data(self):
           """ Returns the sensor readings data as a list. """
           return self.l

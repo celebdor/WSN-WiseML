@@ -25,7 +25,7 @@ def main():
      aparser.add_option('-s', '--serialize', action='store_true', default=False, dest='serialize', help='Serializes the net fetched data.')
      aparser.add_option('-f', '--serialize_from', default='extractor_data.o', dest='fromFile', help='Defines the name of file where the serialized data will be recovered from.')
      aparser.add_option('-t', '--serialize_to', default='extractor_data.o', dest='toFile', help='Defines the name of file where the data will be serialized to.')
-     
+
      (options, args) = aparser.parse_args()
      if options.net and len(args) != 2:
           aparser.error('Incorrect usage')
