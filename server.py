@@ -22,8 +22,13 @@ from optparse import OptionParser
 import datetime
 
 class Raw():
+     def __init__(self):
+	  self.inMaintenance = False
+
      @cherrypy.expose
      def index(self):
+	  if self.inMaintenance == True:
+               return Maintenance.maintenancePage()
           cherrypy.response.headers['Content-Type']= 'text/plain; charset=UTF-8'
           cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech_raw.txt"'
           def content():
@@ -32,13 +37,19 @@ class Raw():
           return content()
 
      index._cp_config = {'response.stream': True}
-
+     
      def setRawObject(self, o):
           self.obj = o
 
+
 class HumanReadable():
+     def __init__(self):
+	  self.inMaintenance = False
+
      @cherrypy.expose
      def index(self):
+	  if self.inMaintenance == True:
+               return Maintenance.maintenancePage()
           cherrypy.response.headers['Content-Type']= 'text/plain'
           cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech_human.txt"'
           return self.out
@@ -49,8 +60,13 @@ class HumanReadable():
           self.out = unicode(o)
 
 class WiseML():
+     def __init__(self):
+	  self.inMaintenance = False
+
      @cherrypy.expose
      def index(self):
+	  if self.inMaintenance == True:
+               return Maintenance.maintenancePage()
           cherrypy.response.headers['Content-Type']= 'text/xml'
           cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
 
@@ -62,8 +78,13 @@ class WiseML():
           self.out = etree.tostring(o.toXml(), pretty_print = True, encoding="UTF-8")
 
 class Intervals():
+     def __init__(self):
+	  self.inMaintenance = False
+
      @cherrypy.expose
      def index(self, start = None, end = None):
+	  if self.inMaintenance == True:
+               return Maintenance.maintenancePage()
           sl = map(lambda x: int(x), start.split('-'))
           el = map(lambda x: int(x), end.split('-'))
           st = datetime.datetime(sl[0], sl[1], sl[2])
@@ -79,8 +100,8 @@ class Intervals():
           self.obj = o
 
 class Maintenance():
-    @cherrypy.expose
-    def index(self):
+    @staticmethod
+    def maintenancePage():
           maintenancePage = """<?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
              "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -132,24 +153,20 @@ class WiseMLServer:
      def update(self):
           print >> sys.stderr, 'Received signal SIGUSR1, updating...'
           print >> sys.stderr, 'Setting the maintenance pages...',
-          tempRaw = WiseMLServer.raw
-          tempHuman = WiseMLServer.human
-          tempWiseml = WiseMLServer.wiseml
-          tempIntervals = WiseMLServer.intervals
-          WiseMLServer.raw = Maintenance
-          WiseMLServer.human = Maintenance
-          WiseMLServer.wiseml = Maintenance
-          WiseMLServer.intervals = Maintenance
+          WiseMLServer.raw.inMaintenance = True
+          WiseMLServer.inMaintenance = True
+          WiseMLServer.inMaintenance = True
+          WiseMLServer.inMaintenance = True
           print >> sys.stderr, 'Done.'
           print >> sys.stderr,'Fetching data from the net...',
           self.df.fetchNetData(weekOrYear = False)
           print >> sys.stderr,'Done.',
-          self.loadData(tempRaw, tempHuman, tempWiseml, tempIntervals)
+          self.loadData(WiseMLServer.raw, WiseMLServer.human, WiseMLServer.wiseml, WiseMLServer.intervals)
           print >> sys.stderr, 'Restoring functional pages...',
-          WiseMLServer.raw = tempRaw
-          WiseMLServer.human = tempHuman
-          WiseMLServer.wiseml = tempWiseml
-          WiseMLServer.intervals = tempIntervals
+          WiseMLServer.raw.inMaintenance = False
+          WiseMLServer.inMaintenance = False
+          WiseMLServer.inMaintenance = False
+          WiseMLServer.inMaintenance = False
           print >> sys.stderr, 'Done.'
           print >> sys.stderr, 'Update process finished.'
 
