@@ -300,18 +300,21 @@ class experiment:
 class dataFetcher:
      """ Fetches the data either from the Internet or an extractor
      serialized file and makes it available for serialization and use."""
-     def __init__(self, username = None, password = None):
+     def __init__(self, username = None, password = None, serializedFile = 'list_obj.o'):
           """ Initializes an empty dataFetcher."""
           self.l = list()
           self.username = username
           self.password = username
+	  self.filename = serializedFile
 
-     def fetchSerialized(self, filename = 'list_obj.o'):
+     def fetchSerialized(self, filename = None):
           """ Fetch the sensor readings from a serialized file.
 
           Keyword arguments:
           filename --- The name of the file containing the serialized object readings.
           """
+	  if filename is None:
+	       filename = self.filename
           try:
                fl = open(filename, 'rb')
           except IOError:
@@ -366,12 +369,14 @@ class dataFetcher:
           self.l.extend(respHum)
           self.l.extend(respLum)
 
-     def serialize(self, filename = 'list_obj.o'):
+     def serialize(self, filename = None):
           """ Save the sensor readings to a serialized file.
 
           Keyword arguments:
           filename --- The name of the file in which to serialize the sensor readings.
           """
+	  if filename is None:
+	       filename = self.filename
           try:
                fl = open(filename, 'wb')
           except IOError:

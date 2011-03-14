@@ -20,6 +20,7 @@ from wisemlModules import dataFetcher, traceProcess
 from lxml import etree
 from optparse import OptionParser
 import datetime
+import os
 
 class Raw():
      def __init__(self):
@@ -112,6 +113,7 @@ class Maintenance():
              <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
                  <head>
                      <title>Sensor data in BarcelonaTech library - Maintenance</title>
+	             <link rel="icon" type="image/x-icon" href="favicon.ico">
                      </head>
 
                       <body>
@@ -160,6 +162,7 @@ class WiseMLServer:
           print >> sys.stderr, 'Done.'
           print >> sys.stderr,'Fetching data from the net...',
           self.df.fetchNetData(weekOrYear = False)
+	  self.df.serialize()
           print >> sys.stderr,'Done.',
           self.loadData(WiseMLServer.raw, WiseMLServer.human, WiseMLServer.wiseml, WiseMLServer.intervals)
           print >> sys.stderr, 'Restoring functional pages...',
@@ -182,6 +185,7 @@ class WiseMLServer:
              <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
                  <head>
                      <title>Sensor data in BarcelonaTech library</title>
+	             <link rel="icon" type="image/x-icon" href="favicon.ico">
                      </head>
 
                       <body>
@@ -220,7 +224,7 @@ def main():
           aparser.error('Incorrect usage')
           sys.exit(0)
 
-     df = dataFetcher(args[0], args[1])
+     df = dataFetcher(args[0], args[1], serializedFile = options.toFile)
      if options.net:
           print >> sys.stderr,'Fetching data from the net...',
           df.fetchNetData()
@@ -231,8 +235,9 @@ def main():
           df.serialize(options.toFile)
      else:
           #conf = { '/':{'server.socket_port':int(options.port)} }
-          cherrypy.config.update({'server.socket_port':int(options.port), 'server.socket_host': '0.0.0.0'})
-          cherrypy.quickstart(WiseMLServer(df))
+          cherrypy.config.update({'server.socket_port':int(options.port), 'server.socket_host': '0.0.0.0', })
+	  conf = {'/favicon.ico':{'tools.staticfile.on': True, 'tools.staticfile.filename': os.path.join(os.getcwd(), 'favicon.ico')}}
+          cherrypy.quickstart(WiseMLServer(df), '/', conf)
 
 if __name__ == "__main__":
      sys.exit(main())
