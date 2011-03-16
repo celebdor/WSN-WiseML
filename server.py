@@ -235,6 +235,7 @@ def main():
     else:
         cherrypy.log.access_log.addHandler(console)
         cherrypy.log.error_log.addHandler(console)
+        cherrypy.log.screen = False
         cherrypy.config.update({'server.socket_port':int(options.port), 'server.socket_host': '0.0.0.0', })
         conf = {'/favicon.ico':{'tools.staticfile.on': True, 'tools.staticfile.filename': os.path.join(os.getcwd(), 'favicon.ico')}}
         cherrypy.quickstart(WiseMLServer(df, logger), '/', conf)
