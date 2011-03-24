@@ -1,23 +1,31 @@
 """
-This file is part of WSN-visor.
+This file is part of WSN-WiseML.
 
-WSN-visor is free software: you can redistribute it and/or modify
+WSN-WiseML is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 any later version.
 
-WSN-visor is distributed in the hope that it will be useful,
+WSN-WiseML is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
+along with WSN-WiseML.  If not, see <http://www.gnu.org/licenses/>.
 """
 import urllib2, sys, urllib, re, pickle, datetime, logging
 from cookielib import CookieJar
 from lxml import etree
 from operator import attrgetter
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from PIL import Image
+try:
+    from cStringIO import StringIO
+except:
+    from StringIO import StringIO
 
 class trace:
     """ A sensor network trace. Collects trace data and allows its
@@ -129,6 +137,9 @@ class experiment:
     conversion to xml. """
     #: Dictionary with node ids and node names.
     nodes = dict()
+    TEMP = 'temp'
+    HUM = 'hum'
+    LUM = 'lum'
 
     @classmethod
     def trackNodes(cls, rhs):
@@ -261,21 +272,7 @@ class experiment:
 
     def toXml(self, start = None, end = None):
         """ Returns an etree.Element object representation of the current experiment."""
-        traceList =  self.traces.values()
-        traceList.sort(key=attrgetter('time'), reverse=False)
-        if start is not None and end is not None:
-            i = 0
-            j = 0
-            for e in traceList:
-                if e.time < start:
-                    i += 1
-                    j += 1
-                elif e.time < end:
-                    j += 1
-                else:
-                    break
-            traceList = traceList[i:j]
-
+        traceList = self._timeSortAndFilter(start, end)
         it = traceList[0].time
         lt = traceList[len(traceList)-1].time
         pd = datetime.timedelta(-1)
@@ -293,6 +290,53 @@ class experiment:
                 pd = t
             root.append(e.toXml())
         return root
+
+    def _timeSortAndFilter(self, start = None, end = None):
+        """ Returns a sorted list of traces. """
+        traceList = self.traces.values()
+        traceList.sort(key=attrgetter('time'), reverse=False)
+        if start is not None and end is not None:
+            i = 0
+            j = 0
+            for e in traceList:
+                if e.time < start:
+                    i += 1
+                    j += 1
+                elif e.time < end:
+                    j += 1
+                else:
+                    break
+            return traceList[i:j]
+        return traceList
+
+    def toPng(self, start = None, end = None, kind = LUM):
+        traceList = self._timeSortAndFilter(start, end)
+        initTime = traceList[0].time
+        times = list()
+        values = list()
+        for e in traceList:
+            t = e.time-initTime
+            times.append(t.seconds)
+            values.append(getattr(e, kind))
+            if kind == experiment.TEMP:
+                plt.ylabel('C' )
+            elif kind == experiment.LUM:
+                plt.ylabel('LUX' )
+            elif kind == experiment.HUM:
+                plt.ylabel('Humidity percentage' )
+            else:
+                return
+        buff = StringIO()
+        plt.plot(times, values, 'r-')
+        plt.xlabel( 'Time in seconds' )
+        plt.grid(True)
+        canvas = plt.get_current_fig_manager().canvas
+        canvas.draw()
+        pil_img = Image.fromstring('RGB', canvas.get_width_height(), canvas.tostring_rgb())
+        pil_img.save(buff, 'PNG')
+        plt.close()
+        return buff.getvalue()
+
 
 def log(logger, level, text, *pars):
     if logger:

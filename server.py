@@ -1,21 +1,22 @@
+#!/usr/bin/env python
 """
-This file is part of WSN-visor.
+This file is part of WSN-WiseML.
 
-WSN-visor is free software: you can redistribute it and/or modify
+WSN-WiseML is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 any later version.
 
-WSN-visor is distributed in the hope that it will be useful,
+WSN-WiseML is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with WSN-visor.  If not, see <http://www.gnu.org/licenses/>.
+along with WSN-WiseML.  If not, see <http://www.gnu.org/licenses/>.
 """
 import sys, os, datetime, cherrypy, logging
-from wisemlModules import dataFetcher, traceProcess, log
+from wisemlModules import dataFetcher, traceProcess, log, experiment
 from lxml import etree
 from optparse import OptionParser
 
@@ -80,20 +81,27 @@ class Intervals():
         self.inMaintenance = False
 
     @cherrypy.expose
-    def index(self, start = None, end = None):
+    def index(self, start = None, end = None, interval_type = None):
         if self.inMaintenance == True:
             return Maintenance.maintenancePage()
         sl = map(lambda x: int(x), start.split('-'))
         el = map(lambda x: int(x), end.split('-'))
         st = datetime.datetime(sl[0], sl[1], sl[2])
         et = datetime.datetime(el[0], el[1], el[2])
-        out = etree.tostring(self.obj.toXml(st, et), pretty_print = True, encoding="UTF-8")
-        cherrypy.response.headers['Content-Type']= 'text/xml'
-        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
-        def content():
-            yield '<?xml version="1.0" encoding="UTF-8"?>\n'
-            yield out
-        return content()
+        if not interval_type or interval_type == 'wiseml':
+            out = etree.tostring(self.obj.toXml(st, et), pretty_print = True, encoding="UTF-8")
+            cherrypy.response.headers['Content-Type']= 'text/xml'
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
+            def wiseContent():
+                yield '<?xml version="1.0" encoding="UTF-8"?>\n'
+                yield out
+            return wiseContent()
+        else:
+            out = self.obj.toPng(st, et, interval_type)
+            cherrypy.response.headers['Content-Type']= 'image/png'
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech_'+interval_type+'.png"'
+            return out
+
     def setRawObject(self, o):
         self.obj = o
 
@@ -150,18 +158,18 @@ class WiseMLServer:
         log(self.logger, logging.INFO, 'Received signal SIGUSR1, updating.')
         log(self.logger, logging.INFO, 'Setting the maintenance pages.')
         WiseMLServer.raw.inMaintenance = True
-        WiseMLServer.inMaintenance = True
-        WiseMLServer.inMaintenance = True
-        WiseMLServer.inMaintenance = True
+        WiseMLServer.human.inMaintenance = True
+        WiseMLServer.wiseml.inMaintenance = True
+        WiseMLServer.intervals.inMaintenance = True
         log(self.logger, logging.INFO, 'Fetching data from the net.')
         self.df.fetchNetData(weekOrYear = False)
         self.df.serialize()
         self.loadData(WiseMLServer.raw, WiseMLServer.human, WiseMLServer.wiseml, WiseMLServer.intervals)
         log(self.logger, logging.INFO, 'Restoring functional pages.')
         WiseMLServer.raw.inMaintenance = False
-        WiseMLServer.inMaintenance = False
-        WiseMLServer.inMaintenance = False
-        WiseMLServer.inMaintenance = False
+        WiseMLServer.human.inMaintenance = False
+        WiseMLServer.wiseml.inMaintenance = False
+        WiseMLServer.intervals.inMaintenance = False
         log(self.logger, logging.INFO, 'Update process finished.')
 
     @cherrypy.expose
@@ -189,7 +197,11 @@ class WiseMLServer:
                   <br/>
                   <form action="intervals">
                   <p>
-                  Generate WiseML file on following intervals:<br/>
+                  Generate a WiseML file or a graph for the following interval:<br/>
+                  <input type="radio" name="interval_type" value="wiseml" default> WiseML<br>
+                  <input type="radio" name="interval_type" value="""+'"'+experiment.TEMP+'"'+"""> Temperature<br>
+                  <input type="radio" name="interval_type" value="""+'"'+experiment.LUM+'"'+"""> Luminosity<br>
+                  <input type="radio" name="interval_type" value="""+'"'+experiment.HUM+'"'+"""> Humidity<br>
                   <label for="start">Start date (YYYY-MM-DD): </label>
                   <input type="text" id="start" name="start"/><br/>
                   <label for="end">End date (YYYY-MM-DD): </label>
