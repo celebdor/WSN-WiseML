@@ -316,10 +316,10 @@ class experiment:
         values = list()
         for e in traceList:
             t = e.time-initTime
-            times.append(t.seconds)
+            times.append(t.days*24*3600+t.seconds)
             values.append(getattr(e, kind))
             if kind == experiment.TEMP:
-                plt.ylabel('C' )
+                plt.ylabel('Celsius' )
             elif kind == experiment.LUM:
                 plt.ylabel('LUX' )
             elif kind == experiment.HUM:

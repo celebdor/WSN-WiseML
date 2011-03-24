@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with WSN-WiseML.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import pwd, sys, time, os, signal, logging, logging.handlers, cherrypy
-from wisemlModules import dataFetcher, traceProcess, log
+import pwd, sys, os, signal, logging, logging.handlers, cherrypy
+from wisemlModules import dataFetcher
 from server import WiseMLServer
 from daemon import Daemon
 
@@ -38,6 +38,7 @@ class WiseMLServerDaemon(Daemon):
             credFile.close()
         except IOError:
             sys.exit(0)
+
         df = dataFetcher(usr, passwd[0:-1], 'extractor_data.o', logger)
 
         if os.path.exists('extractor_data.o'):
