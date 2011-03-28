@@ -284,7 +284,11 @@ class experiment:
         return s
 
     def toXml(self, start = None, end = None):
-        """ Returns an etree.Element object representation of the current experiment."""
+        """ Returns an etree.Element object representation of the current experiment.
+
+        Keyword arguments:
+        start --- A datetime object that sets the start of the experiment.
+        end --- A datetime object that sets the end of the experiment. """
         traceList = self._timeSortAndFilter(start, end)
         it = traceList[0].time
         lt = traceList[len(traceList)-1].time
@@ -305,7 +309,11 @@ class experiment:
         return root
 
     def _timeSortAndFilter(self, start = None, end = None):
-        """ Returns a sorted list of traces. """
+        """ Returns a sorted list of traces.
+
+        Keyword arguments:
+        start --- A datetime object that sets the start of the experiment.
+        end --- A datetime object that sets the end of the experiment. """
         traceList = self.traces.values()
         traceList.sort(key=attrgetter('time'), reverse=False)
         if start is not None and end is not None:
@@ -323,6 +331,12 @@ class experiment:
         return traceList
 
     def toPng(self, start = None, end = None, kind = LUM):
+        """ Returns a png buffered representation of the current experiment.
+
+        Keyword arguments:
+        start --- A datetime object that sets the start of the experiment.
+        end --- A datetime object that sets the end of the experiment.
+        kind --- Which parameter to plot experiment.LUM | experiment.HUM | experiment.TEMP. """
         traceList = self._timeSortAndFilter(start, end)
         initTime = traceList[0].time
         times = list()
@@ -352,6 +366,13 @@ class experiment:
 
 
 def log(logger, level, text, *pars):
+    """ Adds an entry to the log or to the standard output if a log is not available.
+
+    Keyword arguments:
+    logger --- A logger object.
+    level --- The logging level of the message.
+    text --- The templated string of the message.
+    *pars --- The parameters to fill text.  """
     if logger:
         if level is logging.INFO:
             logger.info(text, *pars)
