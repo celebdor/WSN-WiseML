@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with WSN-WiseML.  If not, see <http://www.gnu.org/licenses/>.
 """
-import urllib2, sys, urllib, re, pickle, datetime, logging
+import urllib2, sys, urllib, re, pickle, datetime, logging, csv
 from cookielib import CookieJar
 from lxml import etree
 from operator import attrgetter
@@ -137,6 +137,7 @@ class experiment:
     conversion to xml. """
     #: Dictionary with node ids and node names.
     nodes = dict()
+    pos = dict()
     TEMP = 'temp'
     HUM = 'hum'
     LUM = 'lum'
@@ -147,7 +148,19 @@ class experiment:
 
         rhs -- A trace.
         """
-        cls.nodes[rhs.nodeId] = rhs.name
+        try:
+            noPos = cls.pos[rhs.nodeId]
+        except KeyError:
+            try:
+                f = open('positions.txt', 'ro')
+                reader = csv.reader(f, delimiter = ' ')
+                for row in reader:
+                    cls.pos[row[0]] = (row[1], row[2], row[3])
+                f.close()
+                noPos = cls.pos[rhs.nodeId]
+            except IOError:
+                noPos = ('0.0', '0.0', '0.0')
+        cls.nodes[rhs.nodeId] = {'name': rhs.name, 'x': noPos[0], 'y': noPos[1], 'z': noPos[2]}
 
     def __init__(self):
         """ Initializes an empty experiment."""
@@ -221,11 +234,11 @@ class experiment:
             #position
             pos = etree.SubElement(node, 'position')
             x = etree.SubElement(pos, 'x')
-            x.text = '1.0'
+            x.text = experiment.nodes[n]['x']
             y = etree.SubElement(pos, 'y')
-            y.text = '1.0'
+            y.text = experiment.nodes[n]['y']
             z = etree.SubElement(pos, 'z')
-            z.text = '1.0'
+            z.text = experiment.nodes[n]['z']
             #Gateway
             gateway = etree.SubElement(node, 'gateway')
             gateway.text = 'false'
@@ -237,7 +250,7 @@ class experiment:
             nodeType.text = 'dexcell'
             #description
             description = etree.SubElement(node, 'description')
-            description.text = experiment.nodes[n]
+            description.text = experiment.nodes[n]['name']
             #Capabilities
             cTemp = etree.SubElement(node, 'capability')
             cTempName = etree.SubElement(cTemp, 'name')
