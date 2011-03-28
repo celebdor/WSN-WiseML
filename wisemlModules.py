@@ -346,6 +346,7 @@ class experiment:
         else:
             return
 
+        plt.figure(figsize=(20,15), dpi=80)
         traceList = self._timeSortAndFilter(start, end)
         initTime = traceList[0].time
         plots = dict()
