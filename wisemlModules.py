@@ -337,26 +337,35 @@ class experiment:
         start --- A datetime object that sets the start of the experiment.
         end --- A datetime object that sets the end of the experiment.
         kind --- Which parameter to plot experiment.LUM | experiment.HUM | experiment.TEMP. """
+        if kind == experiment.TEMP:
+            plt.ylabel('Celsius' )
+        elif kind == experiment.LUM:
+            plt.ylabel('LUX' )
+        elif kind == experiment.HUM:
+            plt.ylabel('Humidity percentage' )
+        else:
+            return
+
         traceList = self._timeSortAndFilter(start, end)
         initTime = traceList[0].time
-        times = list()
-        values = list()
+        plots = dict()
         for e in traceList:
-            t = e.time-initTime
-            times.append(t.days*24*3600+t.seconds)
+            delta = e.time-initTime
+            try:
+                times, values = plots[e.nodeId]
+            except:
+                plots[e.nodeId] = (list(), list())
+                times, values = plots[e.nodeId]
+            times.append(initTime+delta)
             values.append(getattr(e, kind))
-            if kind == experiment.TEMP:
-                plt.ylabel('Celsius' )
-            elif kind == experiment.LUM:
-                plt.ylabel('LUX' )
-            elif kind == experiment.HUM:
-                plt.ylabel('Humidity percentage' )
-            else:
-                return
+
         buff = StringIO()
-        plt.plot(times, values, 'r-')
-        plt.xlabel( 'Time in seconds' )
+        for id in plots:
+            times, values = plots[id]
+            plt.plot_date(times, values, '-', xdate=True, ydate=False, label=id)
+
         plt.grid(True)
+        plt.legend()
         canvas = plt.get_current_fig_manager().canvas
         canvas.draw()
         pil_img = Image.fromstring('RGB', canvas.get_width_height(), canvas.tostring_rgb())
