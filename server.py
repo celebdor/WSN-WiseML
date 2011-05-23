@@ -89,17 +89,26 @@ class Intervals():
         st = datetime.datetime(sl[0], sl[1], sl[2])
         et = datetime.datetime(el[0], el[1], el[2])
         if not interval_type or interval_type == 'wiseml':
-            out = etree.tostring(self.obj.toXml(st, et), pretty_print = True, encoding="UTF-8")
-            cherrypy.response.headers['Content-Type']= 'text/xml'
-            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
-            def wiseContent():
-                yield '<?xml version="1.0" encoding="UTF-8"?>\n'
-                yield out
+            try:
+                out = etree.tostring(self.obj.toXml(st, et), pretty_print = True, encoding="UTF-8")
+                cherrypy.response.headers['Content-Type']= 'text/xml'
+                cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech.wiseml"'
+                def wiseContent():
+                    yield '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    yield out
+            except ValueError:
+                cherrypy.response.headers['Content-Type']= 'text/plain'
+                def wiseContent():
+                    yield 'No data for the selected time range'
             return wiseContent()
         else:
-            out = self.obj.toPng(st, et, interval_type)
-            cherrypy.response.headers['Content-Type']= 'image/png'
-            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech_'+interval_type+'.png"'
+            try:
+                out = self.obj.toPng(st, et, interval_type)
+                cherrypy.response.headers['Content-Type']= 'image/png'
+                cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="barcelonatech_'+interval_type+'.png"'
+            except ValueError:
+                cherrypy.response.headers['Content-Type']= 'text/plain'
+                out = "No data for the selected time range"
             return out
 
     def setRawObject(self, o):

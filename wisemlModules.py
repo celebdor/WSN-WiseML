@@ -228,6 +228,50 @@ class experiment:
         endTime.text = et.isoformat()
         timeUnit = etree.SubElement(time, 'unit')
         timeUnit.text = 'seconds'
+
+        #Defaults
+        defaults = etree.SubElement(s, 'defaults')
+        nodeDef = etree.SubElement(defaults, 'node')
+        #Gateway
+        gateway = etree.SubElement(nodeDef, 'gateway')
+        gateway.text = 'false'
+        #programDetails
+        progDetail = etree.SubElement(nodeDef, 'programDetails')
+        progDetail.text = 'Environmental conditions tracking software'
+        #nodeType
+        nodeType = etree.SubElement(nodeDef, 'nodeType')
+        nodeType.text = 'dexcell'
+        #Capabilities
+        cTemp = etree.SubElement(nodeDef, 'capability')
+        cTempName = etree.SubElement(cTemp, 'name')
+        cTempName.text = 'urn:wisebed:upc:node:capability:temperature'
+        cTempDataType = etree.SubElement(cTemp, 'datatype')
+        cTempDataType.text = 'decimal'
+        cTempUnit = etree.SubElement(cTemp, 'unit')
+        cTempUnit.text = 'degrees'
+        cTempDefault = etree.SubElement(cTemp, 'default')
+        cTempDefault.text = '0'
+
+        cHum =  etree.SubElement(nodeDef, 'capability')
+        cHumName = etree.SubElement(cHum, 'name')
+        cHumName.text = 'urn:wisebed:upc:node:capability:humidity'
+        cHumDataType = etree.SubElement(cHum, 'datatype')
+        cHumDataType.text = 'decimal'
+        cHumUnit = etree.SubElement(cHum, 'unit')
+        cHumUnit.text = 'percentage'
+        cHumDefault = etree.SubElement(cHum, 'default')
+        cHumDefault.text = '0'
+
+        cLum =  etree.SubElement(nodeDef, 'capability')
+        cLumName = etree.SubElement(cLum, 'name')
+        cLumName.text = 'urn:wisebed:upc:node:capability:light'
+        cLumDataType = etree.SubElement(cLum, 'datatype')
+        cLumDataType.text = 'decimal'
+        cLumUnit = etree.SubElement(cLum, 'unit')
+        cLumUnit.text = 'lux'
+        cLumDefault = etree.SubElement(cLum, 'default')
+        cLumDefault.text = '0'
+
         for n in experiment.nodes:
             node = etree.SubElement(s, 'node')
             node.attrib['id'] = 'urn:wisebed:upc:'+n
@@ -239,48 +283,9 @@ class experiment:
             y.text = experiment.nodes[n]['y']
             z = etree.SubElement(pos, 'z')
             z.text = experiment.nodes[n]['z']
-            #Gateway
-            gateway = etree.SubElement(node, 'gateway')
-            gateway.text = 'false'
-            #programDetails
-            progDetail = etree.SubElement(node, 'programDetails')
-            progDetail.text = 'Environmental conditions tracking software'
-            #nodeType
-            nodeType = etree.SubElement(node, 'nodeType')
-            nodeType.text = 'dexcell'
             #description
             description = etree.SubElement(node, 'description')
             description.text = experiment.nodes[n]['name']
-            #Capabilities
-            cTemp = etree.SubElement(node, 'capability')
-            cTempName = etree.SubElement(cTemp, 'name')
-            cTempName.text = 'urn:wisebed:upc:node:capability:temperature'
-            cTempDataType = etree.SubElement(cTemp, 'datatype')
-            cTempDataType.text = 'decimal'
-            cTempUnit = etree.SubElement(cTemp, 'unit')
-            cTempUnit.text = 'degrees'
-            cTempDefault = etree.SubElement(cTemp, 'default')
-            cTempDefault.text = '0'
-
-            cHum =  etree.SubElement(node, 'capability')
-            cHumName = etree.SubElement(cHum, 'name')
-            cHumName.text = 'urn:wisebed:upc:node:capability:humidity'
-            cHumDataType = etree.SubElement(cHum, 'datatype')
-            cHumDataType.text = 'decimal'
-            cHumUnit = etree.SubElement(cHum, 'unit')
-            cHumUnit.text = 'percentage'
-            cHumDefault = etree.SubElement(cHum, 'default')
-            cHumDefault.text = '0'
-
-            cLum =  etree.SubElement(node, 'capability')
-            cLumName = etree.SubElement(cLum, 'name')
-            cLumName.text = 'urn:wisebed:upc:node:capability:light'
-            cLumDataType = etree.SubElement(cLum, 'datatype')
-            cLumDataType.text = 'decimal'
-            cLumUnit = etree.SubElement(cLum, 'unit')
-            cLumUnit.text = 'lux'
-            cLumDefault = etree.SubElement(cLum, 'default')
-            cLumDefault.text = '0'
         return s
 
     def toXml(self, start = None, end = None):
@@ -290,7 +295,10 @@ class experiment:
         start --- A datetime object that sets the start of the experiment.
         end --- A datetime object that sets the end of the experiment. """
         traceList = self._timeSortAndFilter(start, end)
-        it = traceList[0].time
+        try:
+            it = traceList[0].time
+        except IndexError:
+            raise ValueError, "Empty time range"
         lt = traceList[len(traceList)-1].time
         pd = datetime.timedelta(-1)
 
@@ -298,14 +306,16 @@ class experiment:
         root.attrib['version'] = '1.0'
         root.attrib['xmlns'] = 'http://wisebed.eu/ns/wiseml/1.0'
         root.append(self.generateXmlSetup(it, lt))
+        trace = etree.SubElement(root, 'trace')
+        trace.attrib['id'] = '0'
         for e in traceList:
             t = e.time-it
             if pd != t:
                 ts = etree.Element('timestamp')
                 ts.text = unicode(t.seconds)
-                root.append(ts)
+                trace.append(ts)
                 pd = t
-            root.append(e.toXml())
+            trace.append(e.toXml())
         return root
 
     def _timeSortAndFilter(self, start = None, end = None):
@@ -348,7 +358,10 @@ class experiment:
 
         plt.figure(figsize=(20,15), dpi=80)
         traceList = self._timeSortAndFilter(start, end)
-        initTime = traceList[0].time
+        try:
+            initTime = traceList[0].time
+        except IndexError:
+            raise ValueError, "Empty time range"
         plots = dict()
         for e in traceList:
             delta = e.time-initTime
